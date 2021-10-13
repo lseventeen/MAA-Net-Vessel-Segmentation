@@ -1,0 +1,69 @@
+CUDA_VISIBLE_DEVICES: 0,1,2
+
+data_process:
+  
+  training:
+    patch_size: 48
+    stride: 6
+  test:
+    patch_size: 48
+    stride: 6
+
+
+data_set: 
+  path: /home/lwt/data_pro/vessel
+  name: DRIVE
+
+########### data_loader: #############
+batch_size: 256
+
+model:
+  type: MSNet
+  args:
+    # num_channels: 1
+    # num_classes: 1
+    dropout: 0.2
+
+    is_MAS: false
+    is_CPAM: false
+    # {}
+
+loss:
+  type: CE_DiceLoss
+  args:
+    # D_weight: 0.5
+    # weight: 0.5
+    # smoothing: 0.1
+    {}
+
+optimizer:
+  type: Adam
+  args:
+    lr: 1e-4
+    weight_decay: 1e-5
+
+lr_scheduler:
+
+  type: CosineAnnealingLR
+  args:
+    T_max: 40
+
+
+###########   trainer: ##############
+epochs: 40
+save_dir: saved/
+monitor: off
+mnt_mode: min
+mnt_metric: val_loss
+early_stop: 10
+val_per_epochs: 1
+test_per_epochs: 1
+save_period: 20
+tensorboard: true
+
+log_dir: saved/runs
+threshold: 0.5
+threshold_low: 0.4
+DTI: false
+amp: false
+tta: false
