@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.nn.utils import weight_norm
-from models.att.da_att import PAM_Module, CAM_Module, CPAM,CPAM_fuse
+from models.att.da_att import CPAM
 
 class conv(nn.Module):
     def __init__(self, in_c, out_c, dp=0):
@@ -32,10 +31,6 @@ class conv(nn.Module):
         out = x + res
         out = self.relu(out)
         return x
-
-
-
-   
 
 class up(nn.Module):
     def __init__(self, in_c, out_c, dp=0):
@@ -97,7 +92,6 @@ class decoder(nn.Module):
             )
         if self.is_CPAM is True:
             self.cpam = CPAM(out_c,1)
-            # self.cpam = CPAM_fuse(out_c)
         self.conv = conv(out_c, out_c, dp=dp)
         if is_up is True:
             self.up = up(out_c,out_c//2)
@@ -171,121 +165,13 @@ class MAS(nn.Module):
         x = self.up2(x)*self.gamma1+x1
         x = self.conv1(x)
         return x
-class sv(nn.Module):
-    def __init__(self, in_c,class_num,dp=0):
-        super(sv,self).__init__()
-        self.gamma3 = nn.Parameter(torch.zeros(1))
-        self.gamma2 = nn.Parameter(torch.zeros(1))
-        self.gamma1 = nn.Parameter(torch.zeros(1))
-        self.up4 = up(in_c,in_c//2)
-        self.up3 = up(in_c//2,in_c//4)
-        self.up2 = up(in_c//4,in_c//8)
-        self.conv4 = nn.Sequential(
-
-            nn.Conv2d(in_c, in_c, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-        self.conv3 = nn.Sequential(
-
-            nn.Conv2d(in_c//2, in_c//2, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//2),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-        self.sv3 = up(in_c//2,in_c//4)
-        self.conv2 = nn.Sequential(
-
-            nn.Conv2d(in_c//4, in_c//4, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//4),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-
-
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(in_c//8, in_c//8, kernel_size=3,
-                      padding=1, stride=1, bias=False),
-            nn.BatchNorm2d(in_c//8),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Dropout2d(dp),
-            nn.Conv2d(in_c//8,class_num, kernel_size=1,
-                      padding=0, stride=1, bias=True)
-           
-        )
-    def forward(self,x4,x3,x2,x1):
-        x = self.conv4(x4)
-        x = self.up4(x)*self.gamma3 + x3 
-        x = self.conv3(x)
-        x = self.up3(x)*self.gamma2+x2
-        x = self.conv2(x)
-        x = self.up2(x)*self.gamma1+x1
-        x = self.conv1(x)
-        return x
-
-class GSV(nn.Module):
-    def __init__(self, in_c,class_num,dp):
-        super(GSV,self).__init__()
-        self.conv4 = nn.Sequential(
-
-            nn.Conv2d(in_c, in_c, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-        self.sv4 = up(in_c,in_c//2)
-        self.conv3 = nn.Sequential(
-
-            nn.Conv2d(in_c, in_c//2, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//2),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-        self.sv3 = up(in_c//2,in_c//4)
-        self.conv2 = nn.Sequential(
-
-            nn.Conv2d(in_c//2, in_c//4, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//4),
-            nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-        self.sv2 = up(in_c//4,in_c//8)
-
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(in_c//4, in_c//8, kernel_size=3,
-                      padding=1, stride=1, bias=False),
-            nn.BatchNorm2d(in_c//8),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Conv2d(in_c//8,class_num, kernel_size=1,
-                      padding=0, stride=1, bias=True)
-           
-        )
-    def forward(self,x4,x3,x2,x1):
-        x = self.conv4(x4)
-        x = self.sv4(x)
-        x = self.conv3(torch.cat([x, x3], dim=1))
-        x = self.sv3(x)
-        x = self.conv2(torch.cat([x, x2], dim=1))
-        x = self.sv2(x)
-        x = self.conv1(torch.cat([x, x1], dim=1))
-        return x
 
 
 
-
-
-class MSNet(nn.Module):
-    def __init__(self,  num_classes=1,num_channels=1, feature_scale=2,  dropout=0.2, is_MAS = True,is_CPAM =True):
-        super(MSNet, self).__init__()
+class MAA_Net(nn.Module):
+    def __init__(self,  num_classes=1,num_channels=1, feature_scale=2,  dropout=0.2):
+        super(MAA_Net, self).__init__()
         # self.out_ave = out_ave
-        self.is_MAS = is_MAS
         filters = [64, 128, 256, 512]
         filters = [int(x / feature_scale) for x in filters]
 
@@ -299,23 +185,19 @@ class MSNet(nn.Module):
         self.encoder1 = encoder(filters[0],dp=dropout)
         self.encoder2 = encoder(filters[1],dp=dropout)
         self.encoder3 = encoder(filters[2],dp=dropout)
-        self.middle = decoder(filters[3], fuse_n=1, dp=dropout,is_CPAM =is_CPAM)
+        self.middle = decoder(filters[3], fuse_n=1, dp=dropout)
 
 
-        self.decoder3 = decoder(filters[2], fuse_n=2, dp=dropout,is_CPAM =is_CPAM)
-        self.decoder2 = decoder(filters[1], fuse_n=2, dp=dropout,is_CPAM =is_CPAM)
-        self.decoder1 = decoder(filters[0], fuse_n=2, dp=dropout,is_up = False,is_CPAM =is_CPAM)
-        # self.gsv = GSV(filters[3],num_classes,dp=dropout)
-        if self.is_MAS is True: 
-            self.mas = MAS(filters[3],num_classes,dp =dropout)
-        else:
-            self.output = nn.Conv2d(filters[0], num_classes, kernel_size=1, padding=0)
+        self.decoder3 = decoder(filters[2], fuse_n=2, dp=dropout)
+        self.decoder2 = decoder(filters[1], fuse_n=2, dp=dropout)
+        self.decoder1 = decoder(filters[0], fuse_n=2, dp=dropout,is_up = False)
+       
+        self.mas = MAS(filters[3],num_classes,dp =dropout)
+       
     def forward(self, x):
         x = self.first_conv(x)
         x1,d1=self.encoder1(x)
-     
         x2,d2=self.encoder2(d1)
-      
         x3,d3=self.encoder3(d2)
      
         up4,output4 = self.middle(d3)
@@ -323,10 +205,8 @@ class MSNet(nn.Module):
         up2,output2 = self.decoder2(torch.cat([up3, x2], dim=1))
         _,output1 = self.decoder1(torch.cat([up2,x1], dim=1))
         
-        if self.is_MAS is True:
-            output = self.mas(output4,output3,output2,output1)
-        else:
-            output = self.output(output1)
+        output = self.mas(output4,output3,output2,output1)
+       
 
         return output
         

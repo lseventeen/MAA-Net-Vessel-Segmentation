@@ -19,16 +19,7 @@ def seed_torch(seed=42):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-def removeConnectedComponents(open, threshold, connectivity=8):
-    _, labels, stats, _ = cv2.connectedComponentsWithStats(open, connectivity=connectivity)
-    results = np.zeros([labels.shape[0], labels.shape[1]], dtype='uint8')
-    for h in range(labels.shape[0]):
-        for w in range(labels.shape[1]):
-            a = stats[labels[h, w], 4]
-            if labels[h, w] != 0 and a > threshold:
-                results[h, w] = 255
 
-    return results
 class Fix_RandomRotation(object):
 
     def __init__(self, degrees=360, resample=False, expand=False, center=None):
@@ -82,29 +73,7 @@ def save_pickle(path, type, img_list):
         pickle.dump(img_list, file)
 
 
-def seedgrow(list, h_thresh, l_thresh, save=True):
-    bin_list = []
-    for index, img in enumerate(list):
-        img = np.array(torch.sigmoid(img).cpu().detach()*255, dtype=np.uint8)
-        bin = np.where(img >= h_thresh*255, 255, 0).astype(np.uint8)
-        gbin = bin.copy()
-        h, w = img.shape
-        gbin_pre = gbin-1
 
-        while(gbin_pre.all() != gbin.all()):
-            gbin_pre = gbin
-            for i in range(h):
-                for j in range(w):
-                    if gbin[i][j] == 0 and img[i][j] < h_thresh*255 and img[i][j] >= l_thresh*255:
-                        if gbin[i-1][j-1] or gbin[i-1][j] or gbin[i-1][j+1] or gbin[i][j-1] or gbin[i][j+1] or gbin[i+1][j-1] or gbin[i+1][j] or gbin[i+1][j+1]:
-                            gbin[i][j] = 255
-
-        if save == True:
-            # cv2.imwrite(f"save_picture/pre{index}.eps", img)
-            cv2.imwrite(f"save_picture/bin{index}.png", bin)
-            cv2.imwrite(f"save_picture/gbin{index}.png", gbin)
-        bin_list.append(gbin/255)
-    return np.array(bin_list)
 
 
 def remove_files(path):
@@ -114,16 +83,7 @@ def remove_files(path):
         for name in dirs:
             os.rmdir(os.path.join(root, name))
 
-def removeConnectedComponents(open, threshold, connectivity=8):
-    _, labels, stats, _ = cv2.connectedComponentsWithStats(open, connectivity=connectivity)
-    results = np.zeros([labels.shape[0], labels.shape[1]], dtype='uint8')
-    for h in range(labels.shape[0]):
-        for w in range(labels.shape[1]):
-            a = stats[labels[h, w], 4]
-            if labels[h, w] != 0 and a > threshold:
-                results[h, w] = 255
 
-    return results
 
 
 def recompone_overlap(preds, img_h, img_w, stride_h, stride_w):

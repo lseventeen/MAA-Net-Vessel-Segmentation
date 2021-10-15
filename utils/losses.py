@@ -33,10 +33,7 @@ class DiceLoss(nn.Module):
 
     def forward(self, prediction, target):
         prediction = torch.sigmoid(prediction)
-        # target_flat = target.contiguous().view(-1)
-        # intersection = (output_flat * target_flat).sum()
-        # loss = 1 - ((2. * intersection + self.smooth) /
-        #             (output_flat.sum() + target_flat.sum() + self.smooth))
+      
         intersection = 2 * torch.sum(prediction * target) + self.smooth
         union = torch.sum(prediction) + torch.sum(target) + self.smooth
         loss = 1 - intersection / union
@@ -55,14 +52,3 @@ class CE_DiceLoss(nn.Module):
 
 
 
-class CE_Loss3(nn.Module):
-    def __init__(self, reduction="mean", D_weight=0.5):
-        super(CE_Loss3, self).__init__()
-        
-        self.l_Loss = BCELoss(reduction=reduction)
-        self.s_Loss = BCELoss(reduction=reduction)
-        self.f_Loss = BCELoss(reduction=reduction)
-        self.D_weight = D_weight
-
-    def forward(self, pre,l_pre,s_pre, tar,l_tar,s_tar):
-        return self.D_weight * self.f_Loss(pre, tar) + (1 - self.D_weight)/2 * self.l_Loss(l_pre,l_tar)+(1 - self.D_weight)/2 * self.s_Loss(s_pre,s_tar)
